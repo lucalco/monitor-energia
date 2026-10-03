@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Monitor Energia Elettrica</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        nav button {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            color: #495057;
+            transition: all 0.3s;
+        }
+
+        nav button:hover {
+            background: #e9ecef;
+        }
+
+        nav button.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section {
+            display: none;
+            padding: 30px;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+
+        input, select {
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button.btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button.btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button.btn-danger {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-card h3 {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .metric-card .value {
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .export-buttons button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ Monitor Energia Elettrica</h1>
+            <p>Gestione consumi e bollette</p>
+        </header>
+
+        <nav>
+            <button class="nav-btn active" onclick="showSection('dashboard')">📊 Dashboard</button>
+            <button class="nav-btn" onclick="showSection('letture')">📝 Letture</button>
+            <button class="nav-btn" onclick="showSection('bollette')">💰 Bollette</button>
+            <button class="nav-btn" onclick="showSection('grafici')">📈 Grafici</button>
+        </nav>
+
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="section active">
+            <h2>📊 Panoramica Consumi</h2>
+
+            <div class="metrics">
+                <div class="metric-card">
+                    <h3>Consumo LUCA</h3>
+                    <div class="value" id="metrica-luca">0 kWh</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Consumo Papà&Mamma</h3>
+                    <div class="value" id="metrica-papa">0 kWh</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Consumo ENEL</h3>
+                    <div class="value" id="metrica-enel">0 kWh</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Totale Bollette</h3>
+                    <div class="value" id="metrica-bollette">0 €</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Letture Totali</h3>
+                    <div class="value" id="metrica-letture">0</div>
+                </div>
+            </div>
+
+            <h3>Ultime letture</h3>
+            <table id="tabella-ultime-letture">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>LUCA (kWh)</th>
+                        <th>Papà&Mamma (kWh)</th>
+                        <th>A1</th>
+                        <th>A2</th>
+                        <th>A3</th>
+                        <th>Acquario</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- LETTURE -->
+        <div id="letture" class="section">
+            <h2>📝 Inserisci Lettura Mensile</h2>
+
+            <div id="alert-letture"></div>
+
+            <form id="form-letture" onsubmit="salvaLettura(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Data *</label>
+                        <input type="date" id="data-lettura" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Consumo LUCA (kWh) *</label>
+                        <input type="number" id="consumo-luca" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Consumo Papà&Mamma (kWh) *</label>
+                        <input type="number" id="consumo-papa" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>A1 (kWh)</label>
+                        <input type="number" id="a1" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>A2 (kWh)</label>
+                        <input type="number" id="a2" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>A3 (kWh)</label>
+                        <input type="number" id="a3" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Consumo Acquario (kWh)</label>
+                        <input type="number" id="acquario" step="0.01" min="0" placeholder="A carico Papà&Mamma">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">💾 Salva Lettura</button>
+            </form>
+
+            <h3 style="margin-top: 40px;">Storico Letture</h3>
+            <table id="tabella-storico-letture">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>LUCA</th>
+                        <th>Papà&Mamma</th>
+                        <th>A1</th>
+                        <th>A2</th>
+                        <th>A3</th>
+                        <th>Acquario</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <div class="export-buttons">
+                <button onclick="esportaCSV('letture')">📥 Scarica CSV Letture</button>
+            </div>
+        </div>
+
+        <!-- BOLLETTE -->
+        <div id="bollette" class="section">
+            <h2>💰 Gestione Bollette Bimestrali</h2>
+
+            <div id="alert-bollette"></div>
+
+            <form id="form-bollette" onsubmit="salvaBolletta(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Data inizio periodo *</label>
+                        <input type="date" id="bolletta-inizio" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Data fine periodo *</label>
+                        <input type="date" id="bolletta-fine" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Importo totale (€) *</label>
+                        <input type="number" id="bolletta-importo" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>kWh fatturati *</label>
+                        <input type="number" id="bolletta-kwh" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Consumo acquario periodo (kWh)</label>
+                        <input type="number" id="bolletta-acquario" step="0.01" min="0" placeholder="A carico Papà&Mamma">
+                    </div>
+                    <div class="form-group">
+                        <label>Note</label>
+                        <input type="text" id="bolletta-note" placeholder="Opzionale">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">💾 Salva Bolletta e Calcola Quote</button>
+            </form>
+
+            <h3 style="margin-top: 40px;">Storico Bollette</h3>
+            <table id="tabella-bollette">
+                <thead>
+                    <tr>
+                        <th>Periodo</th>
+                        <th>Importo</th>
+                        <th>kWh</th>
+                        <th>Costo LUCA</th>
+                        <th>Costo Papà&Mamma</th>
+                        <th>Note</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <div class="metrics" style="margin-top: 30px;">
+                <div class="metric-card" style="background: #28a745;">
+                    <h3>Totale Pagato</h3>
+                    <div class="value" id="totale-pagato">0 €</div>
+                </div>
+                <div class="metric-card" style="background: #17a2b8;">
+                    <h3>Totale LUCA</h3>
+                    <div class="value" id="totale-luca">0 €</div>
+                </div>
+                <div class="metric-card" style="background: #ffc107; color: #333;">
+                    <h3>Totale Papà&Mamma</h3>
+                    <div class="value" id="totale-papa">0 €</div>
+                </div>
+            </div>
+
+            <div class="export-buttons">
+                <button onclick="esportaCSV('bollette')">📥 Scarica CSV Bollette</button>
+            </div>
+        </div>
+
+        <!-- GRAFICI -->
+        <div id="grafici" class="section">
+            <h2>📈 Grafici Consumi</h2>
+
+            <div class="chart-container">
+                <canvas id="grafico-consumi"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="grafico-mensile"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="grafico-enel"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="grafico-costi"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // GESTIONE DATI
+        // ============================================
+
+        let letture = JSON.parse(localStorage.getItem('letture')) || [];
+        let bollette = JSON.parse(localStorage.getItem('bollette')) || [];
+        let grafici = {};
+
+        // Inizializza
+        document.addEventListener('DOMContentLoaded', () => {
+            impostaDataOdierna();
+            aggiornaTutto();
+        });
+
+        function impostaDataOdierna() {
+            const oggi = new Date().toISOString().split('T')[0];
+            document.getElementById('data-lettura').value = oggi;
+            document.getElementById('bolletta-fine').value = oggi;
+
+            const dueMesiFa = new Date();
+            dueMesiFa.setMonth(dueMesiFa.getMonth() - 2);
+            document.getElementById('bolletta-inizio').value = dueMesiFa.toISOString().split('T')[0];
+        }
+
+        function salvaDati() {
+            localStorage.setItem('letture', JSON.stringify(letture));
+            localStorage.setItem('bollette', JSON.stringify(bollette));
+        }
+
+        // ============================================
+        // NAVIGAZIONE
+        // ============================================
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+
+            if (sectionId === 'grafici') {
+                aggiornaGrafici();
+            }
+        }
+
+        // ============================================
+        // LETTURE
+        // ============================================
+
+        function salvaLettura(e) {
+            e.preventDefault();
+
+            const nuovaLettura = {
+                id: Date.now(),
+                data: document.getElementById('data-lettura').value,
+                consumo_luca: parseFloat(document.getElementById('consumo-luca').value),
+                consumo_papa: parseFloat(document.getElementById('consumo-papa').value),
+                a1: parseFloat(document.getElementById('a1').value) || 0,
+                a2: parseFloat(document.getElementById('a2').value) || 0,
+                a3: parseFloat(document.getElementById('a3').value) || 0,
+                acquario: parseFloat(document.getElementById('acquario').value) || 0
+            };
+
+            letture.push(nuovaLettura);
+            letture.sort((a, b) => new Date(a.data) - new Date(b.data));
+            salvaDati();
+
+            mostraAlert('letture', '✅ Lettura salvata con successo!', 'success');
+            document.getElementById('form-letture').reset();
+            impostaDataOdierna();
+            aggiornaTutto();
+        }
+
+        function eliminaLettura(id) {
+            if (confirm('Sei sicuro di voler eliminare questa lettura?')) {
+                letture = letture.filter(l => l.id !== id);
+                salvaDati();
+                aggiornaTutto();
+            }
+        }
+
+        // ============================================
+        // BOLLETTE
+        // ============================================
+
+        function salvaBolletta(e) {
+            e.preventDefault();
+
+            const dataInizio = new Date(document.getElementById('bolletta-inizio').value);
+            const dataFine = new Date(document.getElementById('bolletta-fine').value);
+            const importo = parseFloat(document.getElementById('bolletta-importo').value);
+            const kwhFatturati = parseFloat(document.getElementById('bolletta-kwh').value);
+            const acquarioPeriodo = parseFloat(document.getElementById('bolletta-acquario').value) || 0;
+            const note = document.getElementById('bolletta-note').value;
+
+            // Calcola quote
+            const letturePeriodo = letture.filter(l => {
+                const dataLettura = new Date(l.data);
+                return dataLettura >= dataInizio && dataLettura <= dataFine;
+            }).sort((a, b) => new Date(a.data) - new Date(b.data));
+
+            if (letturePeriodo.length < 2) {
+                mostraAlert('bollette', '⚠️ Servono almeno 2 letture nel periodo selezionato', 'warning');
+                return;
+            }
+
+            const prima = letturePeriodo[0];
+            const ultima = letturePeriodo[letturePeriodo.length - 1];
+
+            const consumoLuca = ultima.consumo_luca - prima.consumo_luca;
+            const consumoPapaGrezzo = ultima.consumo_papa - prima.consumo_papa;
+            const consumoPapa = consumoPapaGrezzo - acquarioPeriodo;
+            const consumoTotale = consumoLuca + consumoPapa;
+
+            if (consumoTotale === 0) {
+                mostraAlert('bollette', '⚠️ Consumo totale nullo', 'warning');
+                return;
+            }
+
+            const percLuca = consumoLuca / consumoTotale;
+            const percPapa = consumoPapa / consumoTotale;
+
+            const costoLuca = importo * percLuca;
+            const costoPapa = importo * percPapa;
+
+            const nuovaBolletta = {
+                id: Date.now(),
+                data_inizio: document.getElementById('bolletta-inizio').value,
+                data_fine: document.getElementById('bolletta-fine').value,
+                importo: importo,
+                kwh: kwhFatturati,
+                acquario: acquarioPeriodo,
+                costo_luca: costoLuca,
+                costo_papa: costoPapa,
+                note: note,
+                dettaglio: `Luca: ${consumoLuca.toFixed(1)} kWh (${(percLuca*100).toFixed(1)}%), Papà: ${consumoPapa.toFixed(1)} kWh (${(percPapa*100).toFixed(1)}%)`
+            };
+
+            bollette.push(nuovaBolletta);
+            bollette.sort((a, b) => new Date(a.data_fine) - new Date(b.data_fine));
+            salvaDati();
+
+            mostraAlert('bollette', `✅ Bolletta salvata! ${nuovaBolletta.dettaglio}`, 'success');
+            document.getElementById('form-bollette').reset();
+            impostaDataOdierna();
+            aggiornaTutto();
+        }
+
+        function eliminaBolletta(id) {
+            if (confirm('Sei sicuro di voler eliminare questa bolletta?')) {
+                bollette = bollette.filter(b => b.id !== id);
+                salvaDati();
+                aggiornaTutto();
+            }
+        }
+
+        // ============================================
+        // AGGIORNAMENTO UI
+        // ============================================
+
+        function aggiornaTutto() {
+            aggiornaDashboard();
+            aggiornaTabellaLetture();
+            aggiornaTabellaBollette();
+        }
+
+        function aggiornaDashboard() {
+            if (letture.length === 0) {
+                document.getElementById('metrica-luca').textContent = '0 kWh';
+                document.getElementById('metrica-papa').textContent = '0 kWh';
+                document.getElementById('metrica-enel').textContent = '0 kWh';
+                document.getElementById('metrica-bollette').textContent = '0 €';
+                document.getElementById('metrica-letture').textContent = '0';
+                return;
+            }
+
+            const prima = letture[0];
+            const ultima = letture[letture.length - 1];
+
+            const consumoLuca = ultima.consumo_luca - prima.consumo_luca;
+            const consumoPapa = ultima.consumo_papa - prima.consumo_papa;
+            const consumoEnel = (ultima.a1 + ultima.a2 + ultima.a3) - (prima.a1 + prima.a2 + prima.a3);
+            const totaleBollette = bollette.reduce((sum, b) => sum + b.importo, 0);
+
+            document.getElementById('metrica-luca').textContent = `${consumoLuca.toFixed(1)} kWh`;
+            document.getElementById('metrica-papa').textContent = `${consumoPapa.toFixed(1)} kWh`;
+            document.getElementById('metrica-enel').textContent = `${consumoEnel.toFixed(1)} kWh`;
+            document.getElementById('metrica-bollette').textContent = `${totaleBollette.toFixed(2)} €`;
+            document.getElementById('metrica-letture').textContent = letture.length;
+
+            // Ultime letture
+            const tbody = document.querySelector('#tabella-ultime-letture tbody');
+            tbody.innerHTML = '';
+            letture.slice(-5).reverse().forEach(l => {
+                const row = `<tr>
+                    <td>${formatData(l.data)}</td>
+                    <td>${l.consumo_luca.toFixed(2)}</td>
+                    <td>${l.consumo_papa.toFixed(2)}</td>
+                    <td>${l.a1.toFixed(2)}</td>
+                    <td>${l.a2.toFixed(2)}</td>
+                    <td>${l.a3.toFixed(2)}</td>
+                    <td>${l.acquario > 0 ? l.acquario.toFixed(2) : '-'}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function aggiornaTabellaLetture() {
+            const tbody = document.querySelector('#tabella-storico-letture tbody');
+            tbody.innerHTML = '';
+
+            letture.slice().reverse().forEach(l => {
+                const row = `<tr>
+                    <td>${formatData(l.data)}</td>
+                    <td>${l.consumo_luca.toFixed(2)}</td>
+                    <td>${l.consumo_papa.toFixed(2)}</td>
+                    <td>${l.a1.toFixed(2)}</td>
+                    <td>${l.a2.toFixed(2)}</td>
+                    <td>${l.a3.toFixed(2)}</td>
+                    <td>${l.acquario > 0 ? l.acquario.toFixed(2) : '-'}</td>
+                    <td><button class="btn-danger" onclick="eliminaLettura(${l.id})">🗑️</button></td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function aggiornaTabellaBollette() {
+            const tbody = document.querySelector('#tabella-bollette tbody');
+            tbody.innerHTML = '';
+
+            bollette.slice().reverse().forEach(b => {
+                const row = `<tr>
+                    <td>${formatData(b.data_inizio)} - ${formatData(b.data_fine)}</td>
+                    <td>${b.importo.toFixed(2)} €</td>
+                    <td>${b.kwh.toFixed(1)}</td>
+                    <td>${b.costo_luca.toFixed(2)} €</td>
+                    <td>${b.costo_papa.toFixed(2)} €</td>
+                    <td>${b.note || '-'}</td>
+                    <td><button class="btn-danger" onclick="eliminaBolletta(${b.id})">🗑️</button></td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+
+            // Totali
+            const totalePagato = bollette.reduce((sum, b) => sum + b.importo, 0);
+            const totaleLuca = bollette.reduce((sum, b) => sum + b.costo_luca, 0);
+            const totalePapa = bollette.reduce((sum, b) => sum + b.costo_papa, 0);
+
+            document.getElementById('totale-pagato').textContent = `${totalePagato.toFixed(2)} €`;
+            document.getElementById('totale-luca').textContent = `${totaleLuca.toFixed(2)} €`;
+            document.getElementById('totale-papa').textContent = `${totalePapa.toFixed(2)} €`;
+        }
+
+        // ============================================
+        // GRAFICI
+        // ============================================
+
+        function aggiornaGrafici() {
+            // Distruggi grafici esistenti
+            Object.values(grafici).forEach(g => g.destroy());
+
+            if (letture.length === 0) return;
+
+            // Grafico 1: Consumi cumulativi
+            const ctx1 = document.getElementById('grafico-consumi').getContext('2d');
+            grafici.consumi = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: letture.map(l => formatData(l.data)),
+                    datasets: [{
+                        label: 'LUCA',
+                        data: letture.map(l => l.consumo_luca),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Papà&Mamma',
+                        data: letture.map(l => l.consumo_papa),
+                        borderColor: '#764ba2',
+                        backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Consumo cumulativo LUCA vs Papà&Mamma'
+                        }
+                    }
+                }
+            });
+
+            // Grafico 2: Consumo mensile
+            const deltaLuca = letture.map((l, i) => i === 0 ? 0 : l.consumo_luca - letture[i-1].consumo_luca);
+            const deltaPapa = letture.map((l, i) => i === 0 ? 0 : l.consumo_papa - letture[i-1].consumo_papa);
+
+            const ctx2 = document.getElementById('grafico-mensile').getContext('2d');
+            grafici.mensile = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: letture.map(l => formatData(l.data)),
+                    datasets: [{
+                        label: 'LUCA',
+                        data: deltaLuca,
+                        backgroundColor: '#667eea'
+                    }, {
+                        label: 'Papà&Mamma',
+                        data: deltaPapa,
+                        backgroundColor: '#764ba2'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Consumo mensile per utente'
+                        }
+                    }
+                }
+            });
+
+            // Grafico 3: ENEL
+            const enelTotale = letture.map(l => l.a1 + l.a2 + l.a3);
+
+            const ctx3 = document.getElementById('grafico-enel').getContext('2d');
+            grafici.enel = new Chart(ctx3, {
+                type: 'line',
+                data: {
+                    labels: letture.map(l => formatData(l.data)),
+                    datasets: [{
+                        label: 'Contatore ENEL',
+                        data: enelTotale,
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Consumo contatore ENEL (A1+A2+A3)'
+                        }
+                    }
+                }
+            });
+
+            // Grafico 4: Costi bollette
+            if (bollette.length > 0) {
+                const ctx4 = document.getElementById('grafico-costi').getContext('2d');
+                grafici.costi = new Chart(ctx4, {
+                    type: 'bar',
+                    data: {
+                        labels: bollette.map(b => formatData(b.data_fine)),
+                        datasets: [{
+                            label: 'LUCA',
+                            data: bollette.map(b => b.costo_luca),
+                            backgroundColor: '#667eea'
+                        }, {
+                            label: 'Papà&Mamma',
+                            data: bollette.map(b => b.costo_papa),
+                            backgroundColor: '#764ba2'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Costo bollette per utente'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // ============================================
+        // UTILITIES
+        // ============================================
+
+        function formatData(dataString) {
+            const data = new Date(dataString);
+            return data.toLocaleDateString('it-IT');
+        }
+
+        function mostraAlert(sezione, messaggio, tipo) {
+            const container = document.getElementById(`alert-${sezione}`);
+            container.innerHTML = `<div class="alert alert-${tipo}">${messaggio}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+
+        function esportaCSV(tipo) {
+            let dati, filename;
+
+            if (tipo === 'letture') {
+                dati = letture;
+                filename = 'letture_energia.csv';
+            } else {
+                dati = bollette;
+                filename = 'bollette_energia.csv';
+            }
+
+            if (dati.length === 0) {
+                alert('Nessun dato da esportare');
+                return;
+            }
+
+            const headers = Object.keys(dati[0]);
+            const csv = [
+                headers.join(','),
+                ...dati.map(row => headers.map(h => row[h]).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+        }
+    </script>
+</body>
+</html>
